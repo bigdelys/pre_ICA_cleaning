@@ -1,4 +1,4 @@
-function result = find_best_preica_cleaning_method(EEG, EEGHandCleaned, fileToSave)
+function result = find_best_preica_cleaning_method(EEG, EEGHandCleaned, fileToSave, methodNumbersToRun)
 % find the best method for rejecting parts of the data before performing
 % ICA
 
@@ -6,6 +6,10 @@ handCleanedExists = nargin > 1 && ~isempty(EEGHandCleaned);
 if nargin<3
     fileToSave = [tempname '.mat'];
     fprintf(['Result will be saved to file ' fileToSave]);
+end;
+
+if nargin<4
+    methodNumbersToRun = [];
 end;
 
 if isempty(EEG.icachansind)
@@ -26,7 +30,12 @@ if handCleanedExists
 EEGHandCleaned.data = double(EEGHandCleaned.data);
 end;
 
-for methodCounter = 1:(22+uint8(handCleanedExists)) % the last method uses hand-cleaned data
+for methodCounter = 1:(26+uint8(handCleanedExists)) % the last method uses hand-cleaned data
+    
+    if ~isempty(methodNumbersToRun) && ~ismember(methodCounter, methodNumbersToRun)
+        continue;
+    end;
+    
     tic;
     result.method(methodCounter).ratioRemoved = 0;
     w = nan;
@@ -218,8 +227,8 @@ for methodCounter = 1:(22+uint8(handCleanedExists)) % the last method uses hand-
             
             result.method(methodCounter).ratioRemoved = 0;
         case 20
-            result.method(methodCounter).label = 'ASR-20';
-            EEGcleaned = clean_asr(EEG, 20);
+            result.method(methodCounter).label = 'ASR-15';
+            EEGcleaned = clean_asr(EEG, 15);
             
             try
                 [w, s] = cudaica(EEGcleaned.data(EEGcleaned.icachansind, :), 'extended', 3);
@@ -246,6 +255,46 @@ for methodCounter = 1:(22+uint8(handCleanedExists)) % the last method uses hand-
             
             result.method(methodCounter).ratioRemoved = mean(any(EEGcleaned.data(EEGcleaned.icachansind, :) ~= EEG.data(EEGcleaned.icachansind, :)));
         case 23
+            result.method(methodCounter).label = 'Squeeze alpha 1';
+            EEGcleaned = squeeze_EEG_amplitude(EEG, 1);
+            
+            try
+                [w, s] = cudaica(EEGcleaned.data(EEGcleaned.icachansind, :), 'extended', 3);
+            catch, end;
+            
+            result.method(methodCounter).ratioRemoved = mean(any(EEGcleaned.data(EEGcleaned.icachansind, :) ~= EEG.data(EEGcleaned.icachansind, :)));
+        case 24
+            result.method(methodCounter).label = 'Squeeze alpha 1.5';
+            EEGcleaned = squeeze_EEG_amplitude(EEG, 1.5);
+            
+            try
+                [w, s] = cudaica(EEGcleaned.data(EEGcleaned.icachansind, :), 'extended', 3);
+            catch, end;
+            
+            result.method(methodCounter).ratioRemoved = mean(any(EEGcleaned.data(EEGcleaned.icachansind, :) ~= EEG.data(EEGcleaned.icachansind, :)));
+            
+        case 25
+            result.method(methodCounter).label = 'Squeeze alpha 0.7';
+            EEGcleaned = squeeze_EEG_amplitude(EEG, 0.7);
+            
+            try
+                [w, s] = cudaica(EEGcleaned.data(EEGcleaned.icachansind, :), 'extended', 3);
+            catch, end;
+            
+            result.method(methodCounter).ratioRemoved = mean(any(EEGcleaned.data(EEGcleaned.icachansind, :) ~= EEG.data(EEGcleaned.icachansind, :)));
+            
+        case 26
+            result.method(methodCounter).label = 'Squeeze alpha 2';
+            EEGcleaned = squeeze_EEG_amplitude(EEG, 2);
+            
+            try
+                [w, s] = cudaica(EEGcleaned.data(EEGcleaned.icachansind, :), 'extended', 3);
+            catch, end;
+            
+            result.method(methodCounter).ratioRemoved = mean(any(EEGcleaned.data(EEGcleaned.icachansind, :) ~= EEG.data(EEGcleaned.icachansind, :)));
+            
+            
+        case 27
             result.method(methodCounter).label = 'Hand-Cleaned';
             try
                 [w, s] = cudaica(EEGHandCleaned.data(EEGHandCleaned.icachansind,:), 'extended', 3);

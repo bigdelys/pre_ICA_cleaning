@@ -1,4 +1,4 @@
-function [PIC outputStructure] = pre_ica_cleaning_index(nonCleanedEEG, icaWeight, icaSphere)
+function [PIC, outputStructure] = pre_ica_cleaning_index(nonCleanedEEG, icaWeight, icaSphere)
 % function [PICI outputStructure] = = pre_ica_cleaning_index(nonCleanedEEG, icaWeight, icaSphere)
 %
 % Calculates an index (Pre ICA Cleaning Index, or PICI) that can be used to compare the quality of ICA cleaning (e.g. artifact rejection)
@@ -66,7 +66,7 @@ mutualInfoMedianFromICA = median(mutualInformationReductionTimeCourseOfICA);
 
 % now calculate mutual information using robust (geometric-median) sphering
 fprintf('Calculating robust sphering matrix using geometric median (takes ~1 minute)...\n');
-robustSphere = robust_sphering_matrix(EEG.data);
+robustSphere = robust_sphering_matrix(nonCleanedEEG.data);
 
 % get MIR of robust sphering
 mutualReductionTimeCourseOfRobustSphering = mututal_info_reduction_time_course(nonCleanedEEG, robustSphere , 'windowDuration', windowDuration);

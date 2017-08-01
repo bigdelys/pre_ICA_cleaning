@@ -4,6 +4,7 @@ function mutualInformationReduction = mututal_info_reduction_time_course(EEG, un
 inputOption = finputcheck(varargin, ...
     { 'windowDuration'     'real'   [0 Inf]       2; ... % in seconds
     'interestFrame'         'real'   []    [1 size(EEG.data,2)] ; ...
+    'progressbar'         'boolean'  [false true]    false ; ...
     'windowOverlapRatio'   'real'  [0 1]   0.5 });
 
 windowLength = inputOption.windowDuration * EEG.srate ; % in frames
@@ -15,11 +16,13 @@ mutualInformationReductionSum = zeros(inputOption.interestFrame(2) - inputOption
 numberOfWindowsForFrame = zeros(inputOption.interestFrame(2) - inputOption.interestFrame(1) + 1, 1);
 
 numberOfWindows = ceil(length(numberOfWindowsForFrame) / windowStep);
+if inputOption.progressbar
 progress('init','');
+end;
 
 while (currentWindowStart + windowLength -1) <= max(inputOption.interestFrame(2))
     
-	if mod(i,10) == 0
+	if inputOption.progressbar && mod(i,10) == 0
 	progress(i/numberOfWindows, sprintf('progress: %d %%', round(100*i/numberOfWindows)));
 	end;
 	
@@ -36,8 +39,10 @@ while (currentWindowStart + windowLength -1) <= max(inputOption.interestFrame(2)
     i = i +1;
 end;
 
+if inputOption.progressbar
 pause(0.1)
 progress('close');
+end;
 
 mutualInformationReduction =real(mutualInformationReductionSum ./ numberOfWindowsForFrame);
 mutualInformationReduction(isnan(mutualInformationReduction)) = 0;

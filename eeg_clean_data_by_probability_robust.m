@@ -1,5 +1,6 @@
-function [isFrameAnArtifact rejectionWindows]= eeg_clean_data_by_probability_robust(EEG, showPlot)
-%    [isFrameAnArtifact rejectionWindows]= eeg_clean_data_by_probability_robust(EEG, showPlot)
+function [isFrameAnArtifact rejectionWindows]= eeg_clean_data_by_probability_robust(EEG, showPlot, minRemoveRatio, ignoreBadChannels)
+%    [isFrameAnArtifact rejectionWindows]= eeg_clean_data_by_probability_robust(EEG, showPlot, minRemoveRatio)
+%    minRemoveRatio: at least this much of data will be marked as artifact.
 %    Usage:
 %		
 %		[isFrameAnArtifact rejectionWindows]= eeg_clean_data_by_probability_robust(EEG, false);
@@ -29,22 +30,29 @@ if nargin < 2
     showPlot = false;
 end;
 
+if nargin < 3
+    minRemoveRatio = 0.05; % at least mark 5% of the least likely parts as artifgacts.
+end;
+
+if nargin < 4
+    ignoreBadChannels = true;
+end;
+
 % ignore bad channels
 
 goodChanneId = 1:EEG.nbchan;
 
-if isempty(EEG.icaweights)
-    badChannel = eeg_detect_bad_channels(EEG);
-    goodChanneId(badChannel) = [];
+if ignoreBadChannels    
+    if isempty(EEG.icaweights)
+        badChannel = eeg_detect_bad_channels(EEG);
+        goodChanneId(badChannel) = [];
+    end;
+    
+    % also ignore channels not present in EEG.icachansind
+    if ~isempty(EEG.icachansind)
+        goodChanneId = intersect(goodChanneId, EEG.icachansind);
+    end;
 end;
-
-useSpheredData = true;
-
-% also ignore channels not present in EEG.icachansind
-if ~isempty(EEG.icachansind)
-    goodChanneId = intersect(goodChanneId, EEG.icachansind);
-end;
-
 
 data = double(eeg_getdatact(EEG));
 data = data(goodChanneId,:);
@@ -80,7 +88,7 @@ windowFrame = round((-windowFrameLenght/2):(windowFrameLenght/2));
 smoothMeanLogLikelihood =  moving_average(windowFrameLenght, meanLogLikelihood)';
 
 
-isArtifactWindowCenter = find(smoothMeanLogLikelihood > 2.1);
+isArtifactWindowCenter = find(smoothMeanLogLikelihood > 2.1 | smoothMeanLogLikelihood > quantile(smoothMeanLogLikelihood, 1-minRemoveRatio));
 
 % add two sides on the window
 artifactFrames = repmat(windowFrame, length(isArtifactWindowCenter), 1) + repmat(isArtifactWindowCenter, 1, length(windowFrame));
@@ -88,8 +96,8 @@ artifactFrames = max(artifactFrames, 1);
 artifactFrames = min(artifactFrames, length(smoothMeanLogLikelihood));
 artifactFrames = unique(artifactFrames(:));
 
-isFrameAnArtifact = zeros(1, length(smoothMeanLogLikelihood));
-isFrameAnArtifact(artifactFrames)  =1;
+isFrameAnArtifact = false(1, length(smoothMeanLogLikelihood));
+isFrameAnArtifact(artifactFrames) = true;
 
 raisingEdge = find(diff([0 isFrameAnArtifact]) > 0);
 fallingEdge = find(diff([isFrameAnArtifact 0]) < 0);
